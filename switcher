@@ -1,12 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 # NVIDIA_DRIVER_VER scans dpkg to guess the version, below is static value if you prefer
 
-MY_USER=`logname`
-NVIDIA_DRIVER_VER=`dpkg -l | grep binary\ driver | gawk '{print $2}'`
-#NVIDIA_DRIVER_VER=nvidia-331-updates
-NVIDIA_MOD_NAME=`echo $NVIDIA_DRIVER_VER | sed s/-/_/g`
-GUI=$XDG_CURRENT_DESKTOP
+export MY_USER=`logname`
+export NVIDIA_DRIVER_VER=`dpkg -l | grep binary\ driver | gawk '{print $2}'`
+#export NVIDIA_DRIVER_VER=nvidia-331-updates
+export NVIDIA_MOD_NAME=`echo $NVIDIA_DRIVER_VER | sed s/-/_/g`
+export GUI=`echo $XDG_CURRENT_DESKTOP`
 
 stopxsession_gnome(){
 
@@ -15,15 +15,15 @@ stopxsession_gnome(){
 
 }
 
-stopxsession_xfce(){
+stopxsession_XFCE(){
 
-  service lightdm stop
+  sudo service lightdm stop
 
 }
 
-restartxsession_xfce(){
+restartxsession_XFCE(){
 
-  service lightdm restart
+  sudo service lightdm restart
 
 }
 
@@ -41,8 +41,17 @@ else
   echo "setting driver version to $NVIDIA_DRIVER_VER"
 fi
 
+if [ -z $GUI ]; then
+  echo "GUI is unset, please manually set"
+  exit 1
+else
+  echo "setting gui to $GUI"
+fi
+
+
 
 if [ $# = 0 ]; then
+  echo 
   echo "Use the one of following commands:"
   echo
   echo "1) Switch to nvidia prime"
@@ -52,11 +61,11 @@ if [ $# = 0 ]; then
  read command
 
   if [ "$command" = "1" ]; then
-  sudo nohup "$0" nvidia
+  sudo -E nohup "$0" nvidia
   fi
 
   if [ "$command" = "2" ]; then
-  sudo nohup "$0" intel
+  sudo -E nohup "$0" intel
   fi
 
   exit
@@ -70,6 +79,8 @@ fi
 
 
 if [ "$1" = "nvidia" ]; then
+
+  GUI=$2
     
   stopxsession_$GUI
 
@@ -78,7 +89,7 @@ if [ "$1" = "nvidia" ]; then
   modprobe $NVIDIA_DRIVER_VER
 
   cp /etc/X11/xorg.conf-nvidia /etc/X11/xorg.conf
-  echo 'xrandr --setprovideroutputsource modesetting NVIDIA-0 && xrandr --auto' > /home/$USER/.xsessionrc
+  echo 'xrandr --setprovideroutputsource modesetting NVIDIA-0 && xrandr --auto' > /home/$MY_USER/.xsessionrc
 
   echo 'start on runlevel [2345]' > /etc/init/nvidia-moja.conf
   echo 'script' >> /etc/init/nvidia-moja.conf
@@ -104,8 +115,12 @@ if [ "$1" = "intel" ]; then
   else
    echo "xorg.conf not present. Skipping"
   fi
-  echo > /home/$USER/.xsessionrc
-  rm /etc/init/nvidia-moja.conf
+  echo > /home/$MY_USER/.xsessionrc
+  if [ -e /etc/init/nvidia-moja.conf ]; then
+   rm /etc/init/nvidia-moja.conf
+  else
+   echo "nvidia-moja.conf not present. Skipping"
+  fi
 
   update-alternatives --set x86_64-linux-gnu_gl_conf /usr/lib/x86_64-linux-gnu/mesa/ld.so.conf
   update-alternatives --set i386-linux-gnu_gl_conf /usr/lib/i386-linux-gnu/mesa/ld.so.conf
