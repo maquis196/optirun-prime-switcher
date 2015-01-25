@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# NVIDIA_DRIVER_VER scans dpkg to guess the version, below is static value if you prefer
+
+MY_USER=`logname`
+NVIDIA_DRIVER_VER=`dpkg -l | grep binary\ driver | gawk '{print $2}'`
+#NVIDIA_DRIVER_VER=nvidia-331-updates
+NVIDIA_MOD_NAME=`echo $NVIDIA_DRIVER_VER | sed s/-/_/g`
+GUI=$XDG_CURRENT_DESKTOP
+
+stopxsession_gnome(){
+
+ gnome-session-quit
+ stop gdm
+
+}
+
+stopxsession_xfce(){
+
+  service lightdm stop
+
+}
+
+restartxsession_xfce(){
+
+  service lightdm restart
+
+}
+
+restartxsession_gnome(){
+
+  stop gdm
+  restart gdm
+
+}
+
+if [ -z $NVIDIA_DRIVER_VER ]; then
+  echo "NVIDIA_DRIVER_VER is unset, please check binary drivers are installed or set manually"
+  exit 1
+else
+  echo "setting driver version to $NVIDIA_DRIVER_VER"
+fi
+
+
+if [ $# = 0 ]; then
+  echo "Use the one of following commands:"
+  echo
+  echo "1) Switch to nvidia prime"
+  echo "2) Switch to intel graphics"
+  echo
+
+ read command
+
+  if [ "$command" = "1" ]; then
+  sudo nohup "$0" nvidia
+  fi
+
+  if [ "$command" = "2" ]; then
+  sudo nohup "$0" intel
+  fi
+
+  exit
+fi
+
+
+if [ `whoami` != "root" ]; then
+  echo "You must run it as root";
+  exit
+fi
+
+
+if [ "$1" = "nvidia" ]; then
+    
+  stopxsession_$GUI
+
+  echo "ON" > /proc/acpi/bbswitch
+  sleep 2
+  modprobe $NVIDIA_DRIVER_VER
+
+  cp /etc/X11/xorg.conf-nvidia /etc/X11/xorg.conf
+  echo 'xrandr --setprovideroutputsource modesetting NVIDIA-0 && xrandr --auto' > /home/$USER/.xsessionrc
+
+  echo 'start on runlevel [2345]' > /etc/init/nvidia-moja.conf
+  echo 'script' >> /etc/init/nvidia-moja.conf
+  echo ' echo "ON" > /proc/acpi/bbswitch' >> /etc/init/nvidia-moja.conf
+  echo ' modprobe $NVIDIA_DRIVER_MOD' >> /etc/init/nvidia-moja.conf
+  echo 'end script' >> /etc/init/nvidia-moja.conf
+
+  update-alternatives --set x86_64-linux-gnu_gl_conf /usr/lib/$NVIDIA_DRIVER_VER/ld.so.conf
+  update-alternatives --set i386-linux-gnu_gl_conf /usr/lib/$NVIDIA_DRIVER_VER/alt_ld.so.conf
+
+  ldconfig
+
+  restartxsession_$GUI
+fi
+
+
+if [ "$1" = "intel" ]; then
+
+  stopxsession_$GUI
+
+  if [ -e /etc/X11/xorg.conf ]; then
+   rm /etc/X11/xorg.conf
+  else
+   echo "xorg.conf not present. Skipping"
+  fi
+  echo > /home/$USER/.xsessionrc
+  rm /etc/init/nvidia-moja.conf
+
+  update-alternatives --set x86_64-linux-gnu_gl_conf /usr/lib/x86_64-linux-gnu/mesa/ld.so.conf
+  update-alternatives --set i386-linux-gnu_gl_conf /usr/lib/i386-linux-gnu/mesa/ld.so.conf
+
+  echo "OFF" > /proc/acpi/bbswitch
+  sleep 2
+  rmmod $NVIDIA_DRIVER_MOD
+
+  ldconfig
+
+  restartxsession_$GUI
+
+fi
