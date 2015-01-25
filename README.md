@@ -1,0 +1,1 @@
+# optirun-prime-switcher
