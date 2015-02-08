@@ -1,8 +1,9 @@
 # optirun-prime-switcher
 
+Note - This is still BETA, it hasn't been tested on that many systems.
+
 Usage:
 
-chmod +x ./switcher
 ./switcher
 
 Choices:
@@ -15,5 +16,6 @@ https://devtalk.nvidia.com/default/topic/705993/easy-switch-between-bumblebee-an
 Tested platforms:
 
 Ubuntu 14.04 running XFCE with nvidia-331-updates
+Ubuntu 14.04 running XFCE with nvidia-346
 
 Please test for other versions, this script would be trivial to support Debian and other GUI's.

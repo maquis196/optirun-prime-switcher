@@ -2,37 +2,12 @@
 
 # NVIDIA_DRIVER_VER scans dpkg to guess the version, below is static value if you prefer
 
-export MY_USER=`logname`
+export MY_USER=maquis196
 export NVIDIA_DRIVER_VER=`dpkg -l | grep binary\ driver | gawk '{print $2}'`
 #export NVIDIA_DRIVER_VER=nvidia-331-updates
 export NVIDIA_MOD_NAME=`echo $NVIDIA_DRIVER_VER | sed s/-/_/g`
-export GUI=`echo $XDG_CURRENT_DESKTOP`
-
-stopxsession_gnome(){
-
- gnome-session-quit
- stop gdm
-
-}
-
-stopxsession_XFCE(){
-
-  sudo service lightdm stop
-
-}
-
-restartxsession_XFCE(){
-
-  sudo service lightdm restart
-
-}
-
-restartxsession_gnome(){
-
-  stop gdm
-  restart gdm
-
-}
+#export GUI=`echo $XDG_CURRENT_DESKTOP`
+#export GUI='XFCE4'
 
 if [ -z $NVIDIA_DRIVER_VER ]; then
   echo "NVIDIA_DRIVER_VER is unset, please check binary drivers are installed or set manually"
@@ -80,9 +55,7 @@ fi
 
 if [ "$1" = "nvidia" ]; then
 
-  GUI=$2
-    
-  stopxsession_$GUI
+  service lightdm stop
 
   echo "ON" > /proc/acpi/bbswitch
   sleep 2
@@ -91,24 +64,24 @@ if [ "$1" = "nvidia" ]; then
   cp /etc/X11/xorg.conf-nvidia /etc/X11/xorg.conf
   echo 'xrandr --setprovideroutputsource modesetting NVIDIA-0 && xrandr --auto' > /home/$MY_USER/.xsessionrc
 
-  echo 'start on runlevel [2345]' > /etc/init/nvidia-moja.conf
-  echo 'script' >> /etc/init/nvidia-moja.conf
-  echo ' echo "ON" > /proc/acpi/bbswitch' >> /etc/init/nvidia-moja.conf
-  echo ' modprobe $NVIDIA_DRIVER_MOD' >> /etc/init/nvidia-moja.conf
-  echo 'end script' >> /etc/init/nvidia-moja.conf
+  echo "start on runlevel [2345]' > /etc/init/nvidia-moja.conf
+  echo " script' >> /etc/init/nvidia-moja.conf
+  echo " echo "ON" > /proc/acpi/bbswitch' >> /etc/init/nvidia-moja.conf
+  echo " modprobe $NVIDIA_DRIVER_MOD" >> /etc/init/nvidia-moja.conf
+  echo "end script" >> /etc/init/nvidia-moja.conf
 
   update-alternatives --set x86_64-linux-gnu_gl_conf /usr/lib/$NVIDIA_DRIVER_VER/ld.so.conf
   update-alternatives --set i386-linux-gnu_gl_conf /usr/lib/$NVIDIA_DRIVER_VER/alt_ld.so.conf
 
   ldconfig
 
-  restartxsession_$GUI
+  service lightdm restart
 fi
 
 
 if [ "$1" = "intel" ]; then
 
-  stopxsession_$GUI
+  service lightdm stop
 
   if [ -e /etc/X11/xorg.conf ]; then
    rm /etc/X11/xorg.conf
@@ -131,6 +104,6 @@ if [ "$1" = "intel" ]; then
 
   ldconfig
 
-  restartxsession_$GUI
+  service lightdm restart
 
 fi
